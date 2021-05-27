@@ -19,22 +19,34 @@ Concerns:
     Github, Gitlab, Bitbucket, etc) and share with me the URL when you finish.
 """
 
-from flask import Flask
+import database as db
+from flask import Flask, render_template, request, jsonify
 
 
 
 app = Flask(__name__)
+es = db.ElasticSearchConnection()
 
 
 @app.route('/')
 def home():
-    pass
+    return render_template('home.jinja2')
 
 
 @app.route('/data/<int:page>')
 def data(page):
     """API route"""
-    pass
+    es_columns = db.FIELD_NAMES
+    es_data = db.getData(page, es)
+    if 'application/json' in request.headers['Accept']:
+        return jsonify(es_data)
+    else:
+        results = [i['_source'] for i in es_data['hits']['hits']]
+        if not results:
+            return render_template('404.jinja2', message=f"Data not found for index {page} in ElasticSearch"
+                                                         f"Try a different value")
+        else:
+            return render_template('table.jinja2', columns=es_columns, data=results)
 
 
 
